@@ -17,27 +17,27 @@ As informações estarão dispostas de acordos com os tópicos a seguir:
 [2. Motivação](#2-motivação)\
 [3. Arquitetura Técnica e de Dados _(BluePrints)_](#3-arquitetura-de-solução)\
 [4. ARQUITETURA TÉCNICA E DE DADOS](#4-arquitetura-técnica-e-de-dados)\
-  [4.1 _spark-tensorflow-distributor_](#41-spark-tensorflow-distributor)\
-  [4.2 _MirroredStrategyRunner_](#42-mirroredstrategyrunner)\
-  [4.3 MLFlow API - PyFunc](#43-mlflow-api---pyfunc)\
-  [4.4 Infraestrutura Azure](#44-infraestrutura-azure)\
-  [4.5 Infraestrutura GCP](#45-infraestrutura-gcp)\
+&nbsp;&nbsp;  [4.1 _spark-tensorflow-distributor_](#41-spark-tensorflow-distributor)\
+&nbsp;&nbsp;  [4.2 _MirroredStrategyRunner_](#42-mirroredstrategyrunner)\
+&nbsp;&nbsp;  [4.3 MLFlow API - PyFunc](#43-mlflow-api---pyfunc)\
+&nbsp;&nbsp;  [4.4 Infraestrutura Azure](#44-infraestrutura-azure)\
+&nbsp;&nbsp;  [4.5 Infraestrutura GCP](#45-infraestrutura-gcp)\
 [5. Dataset e Arquitetura CNN](#5-dataset-e-arquitetura-cnn)\
-[6. TREINAMENTO DATABRICKS AZURE](#6-treinamento-databricks-azure)\
-  [6.1 TREINAMENTO SINGLE NODE](#61-treinamento-single-node)\
-  [6.2 TREINAMENTO DISTRIBUIDO](#62-treinamento-distribuido)\
-    [6.2.1 TREINAMENTO DISTRIBUIDO: LOCAL MODE](#621-treinamento-distribuido-local-mode)\
-    [6.2.2 TREINAMENTO DISTRIBUIDO: DISTRIBUTED MODE](#622-treinamento-distribuido-distributed-mode)\
-    [6.2.3 TREINAMENTO DISTRIBUIDO: CUSTOM MODE](#623-treinamento-distribuido-custom-mode)\
-[7. MODEL LOGGING AND REGISTRY VIA MLFLOW](#7-model-logging-and-registry-via-mlflow)\
-[8. INTEGRAÇÃO VIA MLFLOW API](#8-integração-via-mlflow-api)\
-  [8.1 CRIAÇÃO DE SCOPE E SECRETS DATABRICKS](#81-criação-de-scope-e-secrets-databricks)\
-  [8.2 UTILIZAÇÃO DE CLIENT PARA CONEXÃO COM REPOSITÓRIOS REMOTOS](#82-utilização-de-client-para-conexão-com-repositórios-remotos)\
-[9. DEPLOY DATABRICKS GCP](#9-deploy-databricks-gcp)\
-[10. REQUISIÇÕES DE TESTE NA API DEPLOYADA](#10-requisições-de-teste-na-api-deployada)\
-[11. PROPOSTA DE EVOLUÇÃO TÉCNICA](#11-proposta-de-evolução-técnica)\
-[12. CONCLUSÕES](#12-conclusões)\
-[13. REFERÊNCIAS](#13-referências)
+[6. Treinamento Databricks Azure](#6-treinamento-databricks-azure)\
+&nbsp;&nbsp;  [6.1 Treinamento Single Node](#61-treinamento-single-node)\
+&nbsp;&nbsp;  [6.2 Treinamento Distribuido](#62-treinamento-distribuido)\
+&nbsp;&nbsp;&ensp;    [6.2.1 Treinamento Distribuido: Local Mode](#621-treinamento-distribuido-local-mode)\
+&nbsp;&nbsp;&ensp;    [6.2.2 Treinamento Distribuido: Distributed Mode](#622-treinamento-distribuido-distributed-mode)\
+&nbsp;&nbsp;&ensp;    [6.2.3 Treinamento Distribuido: Custom Mode](#623-treinamento-distribuido-custom-mode)\
+[7. Model Logging e Registry via MLFlow](#7-model-logging-e-registry-via-mlflow)\
+[8. Integração via MLFlow API](#8-integração-via-mlflow-api)\
+&nbsp;&nbsp;  [8.1 Criação de Scope e Secrets Databricks](#81-criação-de-scope-e-secrets-databricks)\
+&nbsp;&nbsp;  [8.2 Utilização de Client para Conexão com Repositórios Remotos](#82-utilização-de-client-para-conexão-com-repositórios-remotos)\
+[9. Deploy DAtabricks GCP](#9-deploy-databricks-gcp)\
+[10. Requisições de Teste na API Deployada](#10-requisições-de-teste-na-api-deployada)\
+[11. Proposta de Evolução Técnica](#11-proposta-de-evolução-técnica)\
+[12. Conclusões](#12-conclusões)\
+[13. Referências](#13-referências)
 
 # 1. Introdução
 
@@ -57,7 +57,9 @@ A escolha destes provedores foi motivada pela disponibilidade de recursos, neste
 
 # 3. Arquitetura de Solução
 
-Como proposta de arquitetura de solução, tem-se uma arquitetura híbrida Azure-GCP. Em ambos os provedores é instanciando uma workspace Databricks com disponibilidade para criação de clusters conforme a necessidade. É proposto para solução a utilização da workspace Azure como Sandbox para treinamento e registro do modelo de CNN, utilizando clusters com recurso de GPU e a biblioteca do TensorFlow como auxiliadora para o uso de imagens/matrizes. Já para a GCP, a workspace utilizada trata-se de um cluster sem GPU, pois não é necessário o recurso gráfico para otimização do deploy desta aplicação, considerando um cenário no qual a API Rest tem uma quantidade de requisições limitadas. Poderia ser criado um cluster com GPU caso fosse necessário que a aplicação respondesse com maior performance ou para um número maior de chamadas simultâneas. A Figura 2 mostra o desenho completo da solução end-to-end.
+Como proposta de arquitetura de solução, tem-se uma arquitetura híbrida Azure-GCP. Em ambos os provedores é instanciando uma workspace Databricks com disponibilidade para criação de clusters conforme a necessidade. É proposto para solução a utilização da workspace Azure como Sandbox para treinamento e registro do modelo de CNN, utilizando clusters com recurso de GPU e a biblioteca do TensorFlow como auxiliadora para o uso de imagens/matrizes. 
+
+Já para a GCP, a workspace utilizada trata-se de um cluster sem GPU, pois não é necessário o recurso gráfico para otimização do deploy desta aplicação, considerando um cenário no qual a API Rest tem uma quantidade de requisições limitadas. Poderia ser criado um cluster com GPU caso fosse necessário que a aplicação respondesse com maior performance ou para um número maior de chamadas simultâneas. A Figura 2 mostra o desenho completo da solução end-to-end.
 
 ![arquitetura_solucao](https://user-images.githubusercontent.com/37118856/206886651-56002d26-4f51-442c-9514-40f9e269cb8c.jpg)
 
@@ -87,19 +89,19 @@ O cenário aqui implementado consistiu no consumo do MNIST, mencionado na sessã
   ### 6.2.1 Treinamento Distribuido: Local Mode
   ### 6.2.2 Treinamento Distribuido: Distributed Mode
   ### 6.2.3 Treinamento Distribuido: Custom Mode
-# 7. MODEL LOGGING AND REGISTRY VIA MLFLOW
-# 8. INTEGRAÇÃO VIA MLFLOW API
-  ## 8.1 CRIAÇÃO DE SCOPE E SECRETS DATABRICKS
-  ## 8.2 UTILIZAÇÃO DE CLIENT PARA CONEXÃO COM REPOSITÓRIOS REMOTOS
-# 9. DEPLOY DATABRICKS GCP
-# 10. REQUISIÇÕES DE TESTE NA API DEPLOYADA
-# 11. PROPOSTA DE EVOLUÇÃO TÉCNICA
+# 7. Model Logging e Registry via MLFlow
+# 8. Integração via MLFlow API
+  ## 8.1 Criação de Scope e Secrets Databricks
+  ## 8.2 Utilização de Client para Conexão com Repositórios Remotos
+# 9. Deploy DAtabricks GCP
+# 10. Requisições de Teste na API Deployada
+# 11. Proposta de Evolução Técnica
 
 Existem oportunidades de melhoria para o desenho de solução implementado, como por exemplo, a utilização de terraform para criação dos clusters de deploy dimensionados de forma mais inteligente para a demanda que o serviço terá. É possível também explorar em mais detalhes a estratégia custom de treinamento possibilitando orquestrar de maneira mais eficiente os recursos necessários para um treinamento end-to-end de um modelo de Deep Learning.
 
 Para avaliação de performance comparativa entre o uso de GPU ou apenas de CPU para treinamento seria necessário evoluir o modelo, adicionando uma maior quantidade de camadas, e épocas em seu treinamento, ganhando assim uma robusteza maior em relação a tempo de treino e acurácia. Haja vista que o foco deste case não era a evolução dentro do treinamento do modelo, e o tempo para realização era limitado, a construção do pipeline foi priorizada.
 
-# 12. CONCLUSÕES
+# 12. Conclusões
 
 No desenvolvimento deste case foi possível constatar a importância de possuir as ferramentas de consumo, preparação, modelagem e deploy da forma mais agnóstica possível. Sendo possível facilmente alternar entre provedores de cloud, quando necessário, e utilizando um fluxo de MLOps/DevOps para de forma eficiente gerir todo o ciclo de vida de desenvolvimento de modelos de ML.
 
@@ -108,9 +110,11 @@ Ademais, para futuras abordagens em problemas de Deep Learning a estratégia de 
 Importante constatar também que, o MLFlow mais uma vez se mostra um importantíssimo e poderosíssimo aliado do Engenheiro de Machine Learning e do Cientista de Dados, e a integração nativa do MLFlow com a plataforma Databricks permite um grande aumento de velocidade para os times de Dados realizarem o deploy dos seus pipelines.
 
 
-# 13. REFERÊNCIAS
+# 13. Referências
 
 Site:
+
 Site:
+
 Site:
 
