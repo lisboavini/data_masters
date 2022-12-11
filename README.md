@@ -93,8 +93,14 @@ O cenário aqui implementado consistiu no consumo do MNIST, mencionado na sessã
 # 8. Integração via MLFlow API
   ## 8.1 Criação de Scope e Secrets Databricks
   ## 8.2 Utilização de Client para Conexão com Repositórios Remotos
-# 9. Deploy DAtabricks GCP
+# 9. Deploy Databricks GCP
 # 10. Requisições de Teste na API Deployada
+
+Para testar o ambiente desenvolvido foi necessário localmente desenvolver um outro notebook responsável por montar a requisição a partir de uma imagem e via POST receber o response do modelo deployado. Seguindo a arquitetura da figura abaixo:
+
+<img width="600" alt="image" align="center" src="https://user-images.githubusercontent.com/37118856/206933989-349fed2f-b7c2-44a2-8ae3-0f394c177ad3.png">
+
+
 # 11. Proposta de Evolução Técnica
 
 Existem oportunidades de melhoria para o desenho de solução implementado, como por exemplo, a utilização de terraform para criação dos clusters de deploy dimensionados de forma mais inteligente para a demanda que o serviço terá. É possível também explorar em mais detalhes a estratégia custom de treinamento possibilitando orquestrar de maneira mais eficiente os recursos necessários para um treinamento end-to-end de um modelo de Deep Learning.
