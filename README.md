@@ -69,9 +69,9 @@ Tecnicamente é possível destacar alguns pontos principais e fundamentais para 
 
   ## 4.1 _spark-tensorflow-distributor_
   
-O _spark-tensorflow-distributor_ é um pacote native de TensorFlow de código aberto que auxilia os desenvolvedores de modelos de IA (cientistas de dados e engenheiros de ML) a distribuir o treinamento dos modelos TF em clusters Spark. Abaixo tem-se um desenho de arquitetura técnica que explica em mais detalhes o funcionamento do pacote.
+O `_spark-tensorflow-distributor_` é um pacote native de TensorFlow de código aberto que auxilia os desenvolvedores de modelos de IA (cientistas de dados e engenheiros de ML) a distribuir o treinamento dos modelos TF em clusters Spark. Abaixo tem-se um desenho de arquitetura técnica que explica em mais detalhes o funcionamento do pacote.
 
-<img width="600" alt="image" src="https://user-images.githubusercontent.com/37118856/208334328-2a68cdb5-aa4d-4d3c-b23d-1dffe5826695.png">
+<img width="800" alt="image" src="https://user-images.githubusercontent.com/37118856/208334328-2a68cdb5-aa4d-4d3c-b23d-1dffe5826695.png">
 
   
   ## 4.2 _MirroredStrategyRunner_
@@ -82,7 +82,7 @@ Foi definida para implementação em uma worksapce Databricks instanciada na Azu
 
 <img width="231" alt="image" src="https://user-images.githubusercontent.com/37118856/208329993-53da5029-9ce7-4186-8f16-e8c0861244ff.png">
 
-Para armazenamento do token de conexão entre workspaces foi criado escopo **data_masters** juntamente com a secret/key **data_master_sandbox**.
+Para armazenamento do token de conexão entre workspaces foi criado escopo `**data_masters**` juntamente com a secret/key `**data_master_sandbox**`.
   
   ## 4.5 Infraestrutura GCP
   
@@ -92,7 +92,7 @@ Para implementação na workspace Databricks GCP, apenas é necessário um únic
  
 Importante salientar também que foi utilizado neste workspace o recurso de serving via API de modelos, que realiza o deploy utilizando o modelo registrado no MLFlow invocando as APIs padrão, neste caso em específico do TFX para deploy de um modelo Tensorflow.
 
-Para armazenamento do token de conexão entre workspaces foi criado escopo **data_masters_gcp** juntamente com a secret/key **data_master_deploy**.
+Para armazenamento do token de conexão entre workspaces foi criado escopo `**data_masters_gcp**` juntamente com a secret/key `**data_master_deploy**`.
 
 
 # 5. Dataset e Arquitetura CNN
@@ -100,6 +100,12 @@ Para armazenamento do token de conexão entre workspaces foi criado escopo **dat
 Foi utilizado o conhecido dataset chamado MNIST - _Modified National Institute of Standards and Technology_, composto por cerca de 70.000 imagens de algarismos numéricos escritos a mão e pode ser utilizado de forma aberta para o desenvolvimento de modelos de reconhecimento de números utilizando técnicas de visão computacional.
 
 ![image](https://user-images.githubusercontent.com/37118856/206886708-a049ffd8-9af0-4ac7-a5b4-d5ebc5e3d19b.png)
+
+O objetivo deste case em específico não consiste no treinamento de um modelo com a melhor acurácia possível, falhas são toleráveis se tratando da predição, logo, a arquitetura selecionada para a rede não foi de grande complexidade, uma vez que, apenas era necessário validar o treinamento de uma CNN, com n camadas ocultas. 
+
+Para tanto, foi utilizada uma rede com 3 camadas `Conv2D`, com ativação `relu`, e nas camadas de saída duas camadas densas, uma com ativação `relu` e a camada de classificação `softmax` para 10 classes.
+
+O `learning_rate` setado foi de `0.001`, utilizando um treino com 50 épocas e 100 steps por época. A métrica logada e avaliada foi apenas acurácia, uma vez que o enfoque não era a qualidade do modelo apresentado.
 
 
 # 6. Treinamento Databricks Azure
@@ -151,7 +157,18 @@ Para testar o ambiente desenvolvido foi necessário localmente desenvolver um ou
 
 Este notebook é responsável por montar a requisição no formato pré-definido na documentação do TFX, seguindo o padrão:
 
-E após a chamada tratar o retorno (numpy array) para encontrar o maior valor que corresponde a predição do modelo nas posições de 0 a 9.
+E, após a chamada, tratar o retorno no formato `np.array()` para encontrar o maior valor que corresponde a predição do modelo, isso é realizado utilizando o método `argmax()` que retorna a posição de 0 a 9 do maior valor encontrado no array.
+
+A chamada precisa conter o token para conexão com o workspace Databricks em seu header, visando sempre as boas práticas de programação e segurança o token foi criado utilizando uma váriavel de ambiente, para que o mesmo não ficasse exposto em código, a variável utilizada foi:
+
+`DATABRICKS_TOKEN_GCP`.
+
+Já o payload deve seguir o formato:
+
+`'{"instances" : [image_np_array]}'`.
+
+Caso mais de uma imagem seja enviada na chamada é necessário adicionar mais instances de acordo com a quantidade desejada. Detalhes podem ser consultados diretamente no notebook: `test_environment_notebook.ipynb`, no qual está descrita toda implementação e consulta na API REST. O tamanho definido para imagem de entrada é de 28x28 pixels, logo, dentro da função foi implementado o redimensionamento das imagens fornecidas pelo usuário.
+
 
 # 11. Proposta de Evolução Técnica
 
