@@ -105,21 +105,44 @@ Foi utilizado o conhecido dataset chamado MNIST - _Modified National Institute o
 # 6. Treinamento Databricks Azure
 
 Foi construído um cenário de Sandbox dentro de uma workspace Databricks Azure, para a construção de modelos de Deep Learning. A escolha do provedor Azure neste cenário específico foi em decorrência dos recursos disponíveis neste ambiente, e a liberdade para o consumo de créditos, acordado previamente.
+
 O cenário aqui implementado consistiu no consumo do MNIST, mencionado na sessão anterior, e utilizando-se uma Rede Convolucional (CNN) com poucas camadas (diminuindo o tempo e recursos para treinamento), para validar o cenário de implantação com um modulo funcional.
 
 Para treinamento utilizando os recursos de GPU e distribuição de tarefas entre os workers existem 4 modos de treinamento conforme detalhados nos tópicos a seguir.
 
 
   ## 6.1 Treinamento Single Node
+  
+O treinamento Single Node consiste na modalidade mais simples de treino, na qual o recurso é completamente alocado no driver, se esse possuir uma GPU a mesma pode ser utilizada para acelerar o treinamento, entretanto a paralelização de tarefas ocorrerá somente dentro das threads da GPU.
+
   ## 6.2 Treinamento Distribuido
+  
+O treinamento distríbuido permite a utilização mais de um nó para paralelização da execução das tarefas de treinamento, podendo multiplexar o treinamento de vários modelos simultaneamente, ou até mesmo de um único modelo cross-workers.
+
   ### 6.2.1 Treinamento Distribuido: Local Mode
+  
+  
   ### 6.2.2 Treinamento Distribuido: Distributed Mode
+  
+  
   ### 6.2.3 Treinamento Distribuido: Custom Mode
+  
+  
 # 7. Model Logging e Registry via MLFlow
+
+
 # 8. Integração via MLFlow API
+
+
   ## 8.1 Criação de Scope e Secrets Databricks
+  
+  
   ## 8.2 Utilização de Client para Conexão com Repositórios Remotos
+  
+  
 # 9. Deploy Databricks GCP
+
+
 # 10. Requisições de Teste na API Deployada
 
 Para testar o ambiente desenvolvido foi necessário localmente desenvolver um outro notebook responsável por montar a requisição a partir de uma imagem e via POST receber o response do modelo deployado. Seguindo a arquitetura da figura abaixo:
