@@ -82,7 +82,7 @@ Foi definida para implementação em uma worksapce Databricks instanciada na Azu
 
 <img width="231" alt="image" src="https://user-images.githubusercontent.com/37118856/208329993-53da5029-9ce7-4186-8f16-e8c0861244ff.png">
 
-Para armazenamento do token de conexão entre workspaces foi criado escopo `**data_masters**` juntamente com a secret/key `**data_master_sandbox**`.
+Para armazenamento do token de conexão entre workspaces foi criado o escopo `**data_masters**` juntamente com a secret/key `**data_master_sandbox**`.
   
   ## 4.5 Infraestrutura GCP
   
@@ -92,7 +92,7 @@ Para implementação na workspace Databricks GCP, apenas é necessário um únic
  
 Importante salientar também que foi utilizado neste workspace o recurso de serving via API de modelos, que realiza o deploy utilizando o modelo registrado no MLFlow invocando as APIs padrão, neste caso em específico do TFX para deploy de um modelo Tensorflow.
 
-Para armazenamento do token de conexão entre workspaces foi criado escopo `**data_masters_gcp**` juntamente com a secret/key `**data_master_deploy**`.
+Para armazenamento do token de conexão entre workspaces foi criado o escopo `**data_masters_gcp**` juntamente com a secret/key `**data_master_deploy**`.
 
 
 # 5. Dataset e Arquitetura CNN
@@ -138,6 +138,14 @@ O treinamento distríbuido permite a utilização mais de um nó para paraleliza
 
 
 # 8. Integração via MLFlow API
+
+Nativamente embarcado a solução da Databricks existe um serviço de MLFlow gerenciado, este serviço contempla todas as funções já conhecidas do MLFlow e disponibiliza uma camada gráfica de UI na plataforma. Além disso, esse serviço nativamente é configurado para armazenar as informações pertinentes ao modelo dentro de um diretório no DBFS da workspace.
+
+Uma das vantagens do serviço já ser nativo a plataforma é a facilidade de não necessitar da instanciação de um serviço paralelo, via container, do MLFlow para se utilizar todas as vantagens desta ferramenta. 
+
+Aproveitando desse fato e também da possibilidade de registrar modelos em um repositório remoto (feature disponibilizada nativamente pelo MLFlow), é possível orquestrar um pipeline para se realizar o treinamento e logging de um modelo em um ambiente de experimentação, sandbox, e registrá-lo remotamente em um ambiente produtivo, de deploy. Conforme ilustrado na figura abaixo.
+
+<img width="900" alt="image" src="https://user-images.githubusercontent.com/37118856/208350713-01446417-5076-42de-b8a0-935604d371f1.png">
 
 
   ## 8.1 Criação de Scope e Secrets Databricks
