@@ -68,10 +68,33 @@ Já para a GCP, a workspace utilizada trata-se de um cluster sem GPU, pois não 
 Tecnicamente é possível destacar alguns pontos principais e fundamentais para que a solução proposta funcione de maneira correta e eficiente. Neste aspecto é importante destacar o modo de funcionamento específico dos três componentes-chaves propostos: **_spark-tensorflow-distributor, MirroredStrategyRunner_** e **_MLFlow API_**. Como também, as definições técnicas de Infra para cada ambiente cloud.
 
   ## 4.1 _spark-tensorflow-distributor_
+  
+O _spark-tensorflow-distributor_ é um pacote native de TensorFlow de código aberto que auxilia os desenvolvedores de modelos de IA (cientistas de dados e engenheiros de ML) a distribuir o treinamento dos modelos TF em clusters Spark. Abaixo tem-se um desenho de arquitetura técnica que explica em mais detalhes o funcionamento do pacote.
+
+<img width="600" alt="image" src="https://user-images.githubusercontent.com/37118856/208334328-2a68cdb5-aa4d-4d3c-b23d-1dffe5826695.png">
+
+  
   ## 4.2 _MirroredStrategyRunner_
   ## 4.3 MLFlow API - PyFunc
   ## 4.4 Infraestrutura Azure
+  
+Foi definida para implementação em uma worksapce Databricks instanciada na Azure uma estrutura com dois clusters, um cluster de apoio para evitar o custo excessivo em tarefas triviais e um cluster de treinamento de modelos, munido de GPU Tesla. A tabela abaixo contém a descrição detalhada dos clusters e os correspondentes recursos criados.
+
+<img width="231" alt="image" src="https://user-images.githubusercontent.com/37118856/208329993-53da5029-9ce7-4186-8f16-e8c0861244ff.png">
+
+Para armazenamento do token de conexão entre workspaces foi criado escopo **data_masters** juntamente com a secret/key **data_master_sandbox**.
+  
   ## 4.5 Infraestrutura GCP
+  
+Para implementação na workspace Databricks GCP, apenas é necessário um único cluster para teste e deploy do modelo via MLFlow na forma de API REST. Este cluster não necessita, obrigatoriamente, de GPU, o modelo pode ser deployado em um cluster apenas com CPU, e a depender da necessidade por velocidade e processamento da aplicação a ser utilizada, pode ser utilizado o recurso de placas gráficas para acelerar o desempenho.
+  
+  <img width="241" alt="image" src="https://user-images.githubusercontent.com/37118856/208330032-69a19d4f-b7d2-4d26-b8ec-2840dfa70b65.png">
+ 
+Importante salientar também que foi utilizado neste workspace o recurso de serving via API de modelos, que realiza o deploy utilizando o modelo registrado no MLFlow invocando as APIs padrão, neste caso em específico do TFX para deploy de um modelo Tensorflow.
+
+Para armazenamento do token de conexão entre workspaces foi criado escopo **data_masters_gcp** juntamente com a secret/key **data_master_deploy**.
+
+
 # 5. Dataset e Arquitetura CNN
 
 Foi utilizado o conhecido dataset chamado MNIST - _Modified National Institute of Standards and Technology_, composto por cerca de 70.000 imagens de algarismos numéricos escritos a mão e pode ser utilizado de forma aberta para o desenvolvimento de modelos de reconhecimento de números utilizando técnicas de visão computacional.
@@ -82,7 +105,10 @@ Foi utilizado o conhecido dataset chamado MNIST - _Modified National Institute o
 # 6. Treinamento Databricks Azure
 
 Foi construído um cenário de Sandbox dentro de uma workspace Databricks Azure, para a construção de modelos de Deep Learning. A escolha do provedor Azure neste cenário específico foi em decorrência dos recursos disponíveis neste ambiente, e a liberdade para o consumo de créditos, acordado previamente.
-O cenário aqui implementado consistiu no consumo do MNIST, mencionado na sessão anterior, e utilizando-se uma Rede Convolutiva (CNN) com poucas camadas (diminuindo o tempo e recursos para treinamento), para validar o cenário de implantação com um modulo funcional.
+O cenário aqui implementado consistiu no consumo do MNIST, mencionado na sessão anterior, e utilizando-se uma Rede Convolucional (CNN) com poucas camadas (diminuindo o tempo e recursos para treinamento), para validar o cenário de implantação com um modulo funcional.
+
+Para treinamento utilizando os recursos de GPU e distribuição de tarefas entre os workers existem 4 modos de treinamento conforme detalhados nos tópicos a seguir.
+
 
   ## 6.1 Treinamento Single Node
   ## 6.2 Treinamento Distribuido
@@ -100,6 +126,9 @@ Para testar o ambiente desenvolvido foi necessário localmente desenvolver um ou
 
 <img width="600" alt="image" align="center" src="https://user-images.githubusercontent.com/37118856/206933989-349fed2f-b7c2-44a2-8ae3-0f394c177ad3.png">
 
+Este notebook é responsável por montar a requisição no formato pré-definido na documentação do TFX, seguindo o padrão:
+
+E após a chamada tratar o retorno (numpy array) para encontrar o maior valor que corresponde a predição do modelo nas posições de 0 a 9.
 
 # 11. Proposta de Evolução Técnica
 
@@ -118,9 +147,11 @@ Importante constatar também que, o MLFlow mais uma vez se mostra um importantí
 
 # 13. Referências
 
-Site:
+Site: https://learn.microsoft.com/en-us/azure/databricks/machine-learning/train-model/distributed-training/spark-tf-distributor
 
-Site:
+Site: https://learn.microsoft.com/en-us/azure/databricks/machine-learning/manage-model-lifecycle/multiple-workspaces
 
-Site:
+Site: https://www.databricks.com/blog/2016/01/25/deep-learning-with-apache-spark-and-tensorflow.html
+
+Site: https://www.mlflow.org/docs/latest/rest-api.html
 
