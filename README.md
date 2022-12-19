@@ -6,7 +6,7 @@ Por: Marcos Vinícius Lisboa Melo
 
 Este repositório visa condensar as informações pertinentes a arquitetura, desenvolvimento de código e ambiente para desenho e execução do case para obtenção da certificação Data Master na carreira de Engenheiro Machine Learning. Para uma melhor organização e facilitação da replicação de toda a estrutura desenvolvida cada branch possui os códigos e READMEs específicos para build e utilização de cada ambiente.
 As branchs estão dispostas da seguinte maneira:
-* **_master:_ Contém a documentação e Descrição de ambientes** 
+* **_master:_ Contém a documentação, apresentação e descrição de ambientes** 
 * **_train_environment:_ Notebook de treinamento Databricks Azure**
 * **_deploy_environment:_ Notebook de deploy Databricks GCP**
 * **_request_environment:_ Notebook de Teste Local - Jupyter**
