@@ -78,6 +78,8 @@ O `_spark-tensorflow-distributor_` é um pacote native de TensorFlow de código 
   ## 4.3 MLFlow API - PyFunc
   ## 4.4 Infraestrutura Azure
   
+Caso seja necessário realizar a criação de um Workspace Databricks em um recurso Azure, vide referência com passo-a-passo: https://learn.microsoft.com/en-us/azure/databricks/scenarios/quickstart-create-databricks-workspace-vnet-injection.
+  
 Foi definida para implementação em uma worksapce Databricks instanciada na Azure uma estrutura com dois clusters, um cluster de apoio para evitar o custo excessivo em tarefas triviais e um cluster de treinamento de modelos, munido de GPU Tesla. A tabela abaixo contém a descrição detalhada dos clusters e os correspondentes recursos criados.
 
 <img width="231" alt="image" src="https://user-images.githubusercontent.com/37118856/208329993-53da5029-9ce7-4186-8f16-e8c0861244ff.png">
@@ -85,6 +87,8 @@ Foi definida para implementação em uma worksapce Databricks instanciada na Azu
 Para armazenamento do token de conexão entre workspaces foi criado o escopo `**data_masters**` juntamente com a secret/key `**data_master_sandbox**`.
   
   ## 4.5 Infraestrutura GCP
+  
+Caso seja necessário realizar a criação de um Workspace Databricks de um recurso Google, vide referência com passo-a-passo: https://docs.gcp.databricks.com/administration-guide/account-settings-gcp/workspaces.html.
   
 Para implementação na workspace Databricks GCP, apenas é necessário um único cluster para teste e deploy do modelo via MLFlow na forma de API REST. Este cluster não necessita, obrigatoriamente, de GPU, o modelo pode ser deployado em um cluster apenas com CPU, e a depender da necessidade por velocidade e processamento da aplicação a ser utilizada, pode ser utilizado o recurso de placas gráficas para acelerar o desempenho.
   
@@ -136,10 +140,18 @@ O treinamento distríbuido permite a utilização mais de um nó para paraleliza
   
 # 7. Model Logging e Registry via MLFlow
 
+Nativamente embarcado a solução da Databricks existe um serviço de MLFlow gerenciado, este serviço contempla todas as funções já conhecidas do MLFlow e disponibiliza uma camada gráfica de UI na plataforma. Além disso, esse serviço nativamente é configurado para armazenar as informações pertinentes ao modelo dentro de um diretório no DBFS da workspace.
+
+Podem ser encontradas informações detalhadas de como realizar cada uma das etapas de modelos dentro do ambiente Databricks no link: https://docs.databricks.com/mlflow/models.html.
+
+É possível utilizar todas as funções disponíveis do MLFlow fazendo o import da biblioteca e utilizando os recursos de log, tracking, models e registry da ferramenta, conforme exemplificados na imagem abaixo.
+
+![image](https://user-images.githubusercontent.com/37118856/210175030-f20b84d9-02c2-4df4-b3cf-004f60ad3a32.png)
+
+A abordagem aqui descrita fez uso do componente de autolog do MLFlow, já que nosso foco não era detalhar ao máximo os registros dentro do experimento, ams sim, validar todo o pipeline criado. E após isso realizar o registry do modelo, podendo ser diretamente pela UI ou através de comando em código. Detalhes são facilmente observados dentro dos notebooks de treino e deploy, os quais, respectivamente, logam e registram e após carregam e servem.
+
 
 # 8. Integração via MLFlow API
-
-Nativamente embarcado a solução da Databricks existe um serviço de MLFlow gerenciado, este serviço contempla todas as funções já conhecidas do MLFlow e disponibiliza uma camada gráfica de UI na plataforma. Além disso, esse serviço nativamente é configurado para armazenar as informações pertinentes ao modelo dentro de um diretório no DBFS da workspace.
 
 Uma das vantagens do serviço já ser nativo a plataforma é a facilidade de não necessitar da instanciação de um serviço paralelo, via container, do MLFlow para se utilizar todas as vantagens desta ferramenta. 
 
