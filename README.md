@@ -25,10 +25,10 @@ As informações estarão dispostas de acordos com os tópicos a seguir:
 [5. Dataset e Arquitetura CNN](#5-dataset-e-arquitetura-cnn)\
 [6. Treinamento Databricks Azure](#6-treinamento-databricks-azure)\
 &nbsp;&nbsp;  [6.1 Treinamento Single Node](#61-treinamento-single-node)\
-&nbsp;&nbsp;  [6.2 Treinamento Distribuido](#62-treinamento-distribuido)\
-&nbsp;&nbsp;&ensp;    [6.2.1 Treinamento Distribuido: Local Mode](#621-treinamento-distribuido-local-mode)\
-&nbsp;&nbsp;&ensp;    [6.2.2 Treinamento Distribuido: Distributed Mode](#622-treinamento-distribuido-distributed-mode)\
-&nbsp;&nbsp;&ensp;    [6.2.3 Treinamento Distribuido: Custom Mode](#623-treinamento-distribuido-custom-mode)\
+&nbsp;&nbsp;  [6.2 Treinamento Distribuído](#62-treinamento-distribuído)\
+&nbsp;&nbsp;&ensp;    [6.2.1 Treinamento Distribuído: Local Mode](#621-treinamento-distribuído-local-mode)\
+&nbsp;&nbsp;&ensp;    [6.2.2 Treinamento Distribuído: Distributed Mode](#622-treinamento-distribuído-distributed-mode)\
+&nbsp;&nbsp;&ensp;    [6.2.3 Treinamento Distribuído: Custom Mode](#623-treinamento-distribuído-custom-mode)\
 [7. Model Logging e Registry via MLFlow](#7-model-logging-e-registry-via-mlflow)\
 [8. Integração via MLFlow API](#8-integração-via-mlflow-api)\
 &nbsp;&nbsp;  [8.1 Criação de Scope e Secrets Databricks](#81-criação-de-scope-e-secrets-databricks)\
@@ -71,11 +71,27 @@ Tecnicamente é possível destacar alguns pontos principais e fundamentais para 
   
 O `_spark-tensorflow-distributor_` é um pacote native de TensorFlow de código aberto que auxilia os desenvolvedores de modelos de IA (cientistas de dados e engenheiros de ML) a distribuir o treinamento dos modelos TF em clusters Spark. Abaixo tem-se um desenho de arquitetura técnica que explica em mais detalhes o funcionamento do pacote.
 
-<img width="800" alt="image" src="https://user-images.githubusercontent.com/37118856/208334328-2a68cdb5-aa4d-4d3c-b23d-1dffe5826695.png">
+<img width="900" alt="image" src="https://user-images.githubusercontent.com/37118856/208334328-2a68cdb5-aa4d-4d3c-b23d-1dffe5826695.png">
 
   
   ## 4.2 _MirroredStrategyRunner_
+  
+Dentro do pacote mencionado no tópico anterior é possível encontrar um método chamado `MirroredStrategyRunner()`, que dentro de si encapsula as funções necessárias para definir o número de slots, tipo de treino e quantidade de GPUs utilizadas. Ele tem a função embarcada de realizar as conexões e divisão de paralelismo entre os nodes, e é o principal componente do pacote de distribuição.
+  
   ## 4.3 MLFlow API - PyFunc
+  
+O MLflow tem como intuito oferecer suporte ao ciclo de vida de projetos de ML, mas também disponibiliza uma API para diminuir alguns desafios comuns, como: compartilhamento de artefatos, reprodutibilidade do modelo, etc. MLflow é uma ferramenta de ciclo de vida de aprendizado de máquina de código aberto, que facilita o gerenciamento do fluxo de trabalho para treinamento, rastreamento e produção de modelos de machine learning. 
+
+O MLFlow foi organizado para funcionar com as bibliotecas e estruturas de aprendizado de máquina mais recentes e utilizadas no mercado atualmente. Na imagem abaixo pode-se observar o funcionamento arquitetural como um todo do fluxo de MLOps.
+  
+![image](https://user-images.githubusercontent.com/37118856/210183675-52e00553-6184-4049-9d45-c7f065d73ffb.png)
+  
+O _flavour_ python_function serve como uma interface de modelo padrão para modelos Python do MLflow. Espera-se que qualquer modelo MLflow Python seja carregável como um modelo `python_function`.
+
+Além disso, o módulo `mlflow.pyfunc` define um formato de sistema de arquivos genérico para modelos Python e fornece utilitários para salvar e carregar desse formato. O formato é independente no sentido de que inclui todas as informações necessárias para que qualquer pessoa possa carregá-lo e usá-lo. As dependências são armazenadas diretamente com o modelo ou referenciadas por meio de um ambiente Conda.
+
+O módulo `mlflow.pyfunc` também define utilitários para criar modelos pyfunc personalizados usando estruturas e lógica de inferência que podem não estar incluídas nativamente no MLflow.
+  
   ## 4.4 Infraestrutura Azure
   
 Caso seja necessário realizar a criação de um Workspace Databricks em um recurso Azure, vide referência com passo-a-passo: https://learn.microsoft.com/en-us/azure/databricks/scenarios/quickstart-create-databricks-workspace-vnet-injection.
@@ -125,31 +141,57 @@ Para treinamento utilizando os recursos de GPU e distribuição de tarefas entre
   
 O treinamento Single Node consiste na modalidade mais simples de treino, na qual o recurso é completamente alocado no driver, se esse possuir uma GPU a mesma pode ser utilizada para acelerar o treinamento, entretanto a paralelização de tarefas ocorrerá somente dentro das threads da GPU.
 
-  ## 6.2 Treinamento Distribuido
+A partir de uma função de treinamento pré-construída pode-se invocar o treinamento single-node conforme abaixo:
+
+```python
+from spark_tensorflow_distributor import MirroredStrategyRunner
+ 
+runner = MirroredStrategyRunner(num_slots=1, local_mode=True, use_gpu=USE_GPU)
+runner.run(train)
+```
+
+  ## 6.2 Treinamento Distribuído
   
 O treinamento distríbuido permite a utilização mais de um nó para paralelização da execução das tarefas de treinamento, podendo multiplexar o treinamento de vários modelos simultaneamente, ou até mesmo de um único modelo cross-workers.
 
-  ### 6.2.1 Treinamento Distribuido: Local Mode
+  ### 6.2.1 Treinamento Distribuído: Local Mode
   
   
-  ### 6.2.2 Treinamento Distribuido: Distributed Mode
+  ### 6.2.2 Treinamento Distribuído: Distributed Mode
   
   
-  ### 6.2.3 Treinamento Distribuido: Custom Mode
+  ### 6.2.3 Treinamento Distribuído: Custom Mode
   
   
 # 7. Model Logging e Registry via MLFlow
 
 Nativamente embarcado a solução da Databricks existe um serviço de MLFlow gerenciado, este serviço contempla todas as funções já conhecidas do MLFlow e disponibiliza uma camada gráfica de UI na plataforma. Além disso, esse serviço nativamente é configurado para armazenar as informações pertinentes ao modelo dentro de um diretório no DBFS da workspace.
 
-Podem ser encontradas informações detalhadas de como realizar cada uma das etapas de modelos dentro do ambiente Databricks no link: https://docs.databricks.com/mlflow/models.html.
+Podem ser encontradas informações detalhadas de como realizar cada uma das etapas de modelos dentro do ambiente Databricks no link: [MLFlow Log & Registry](https://docs.databricks.com/mlflow/models.html).
 
 É possível utilizar todas as funções disponíveis do MLFlow fazendo o import da biblioteca e utilizando os recursos de log, tracking, models e registry da ferramenta, conforme exemplificados na imagem abaixo.
 
 ![image](https://user-images.githubusercontent.com/37118856/210175030-f20b84d9-02c2-4df4-b3cf-004f60ad3a32.png)
 
-A abordagem aqui descrita fez uso do componente de autolog do MLFlow, já que nosso foco não era detalhar ao máximo os registros dentro do experimento, ams sim, validar todo o pipeline criado. E após isso realizar o registry do modelo, podendo ser diretamente pela UI ou através de comando em código. Detalhes são facilmente observados dentro dos notebooks de treino e deploy, os quais, respectivamente, logam e registram e após carregam e servem.
+A abordagem aqui descrita fez uso do componente de autolog do MLFlow, já que o foco não era detalhar ao máximo os registros dentro do experimento, mas sim, validar todo o pipeline criado. E após isso realizar o registry do modelo, podendo ser diretamente pela UI ou através de comando em código. Detalhes são facilmente observados dentro dos notebooks de treino e deploy, os quais, respectivamente, logam e registram e após carregam e servem.
 
+Para importar a biblioteca o código abaixo pode ser utilizado:
+```python
+import mlflow
+import mlflow.tensorflow
+import mlflow.spark
+```
+Para o autolog:
+```python
+mlflow.autolog()
+mlflow.spark.autolog()
+mlflow.tensorflow.autolog()
+```
+Para o registry de modelos:
+```python
+mlflow.set_registry_uri(registry_uri)
+mlflow.register_model(model_uri=<path_to_uri_model>, name=<name_of_model_to_save>)
+```
 
 # 8. Integração via MLFlow API
 
@@ -162,6 +204,12 @@ Aproveitando desse fato e também da possibilidade de registrar modelos em um re
 
   ## 8.1 Criação de Scope e Secrets Databricks
   
+Para utilização da API do MLFlow para acesso de modelos em um repositório remoto é necessário criar um escopo dentro do que seria a “key vault” do workspace local Databricks e adicionar três secrets referentes ao workspace remoto (host, token e workspace-id), isso pode ser feito de duas maneiras distintas, via Databricks CLI ou via Databricks API, para esta implantação foi utilizada o Databricks CLI. É necessário seguir o procedimento detalhado descrito na documentação que pode ser encontrada no link: [Secret scopes - Azure Databricks | Microsoft Learn](https://learn.microsoft.com/en-us/azure/databricks/security/secrets/secret-scopes).
+
+Após a correta realização do procedimento é possível acessar um repositório remoto utilizando o Client da API do MLFlow, utilizando os métodos descritos no passo-a-passo. Uma vez conectado ao repositório remoto tem-se o acesso completo as funções do MLFlow.
+
+Na seção [4.4](#44-infraestrutura-azure) e [4.5](#45-infraestrutura-gcp) foram descritas as secrets criadas em ambos os ambientes GCP e Azure para utilização dos recursos cross-workspace. Vale salientar que faz-se necessário a prévia criação do token de acesso nos workspaces que serão utilizados.
+
   
   ## 8.2 Utilização de Client para Conexão com Repositórios Remotos
   
