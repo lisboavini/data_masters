@@ -46,7 +46,7 @@ Esta documentação tem como objetivo contemplar técnica e funcionalmente a con
 # 2. Motivação
 
 O case segue, conforme a instrução de execução, os seguintes cenários de implementação: 
-* **A5-)** Servir um modelo escolhido do Kaggle de Imagem; 
+* **A5-)** Servir um modelo escolhido do Kaggle (ou outro repositório) de Imagem; 
 * **B2-)** Demonstre como seria o pipeline de implantação de um modelo implementado;
 * **C1-)** Demostre por que uma ferramenta de orquestração de modelo pode ajudar nas implantações de modelos;
 * **D2-)** Demonstre a importância dos pipelines de DEVOPs para a implantação de modelos.
@@ -71,7 +71,7 @@ Tecnicamente é possível destacar alguns pontos principais e fundamentais para 
   
 O `_spark-tensorflow-distributor_` é um pacote native de TensorFlow de código aberto que auxilia os desenvolvedores de modelos de IA (cientistas de dados e engenheiros de ML) a distribuir o treinamento dos modelos TF em clusters Spark. Abaixo tem-se um desenho de arquitetura técnica que explica em mais detalhes o funcionamento do pacote.
 
-<img width="900" alt="image" src="https://user-images.githubusercontent.com/37118856/208334328-2a68cdb5-aa4d-4d3c-b23d-1dffe5826695.png">
+<img width="1000" alt="image" src="https://user-images.githubusercontent.com/37118856/208334328-2a68cdb5-aa4d-4d3c-b23d-1dffe5826695.png">
 
   
   ## 4.2 _MirroredStrategyRunner_
@@ -132,7 +132,55 @@ O `learning_rate` setado foi de `0.001`, utilizando um treino com 50 épocas e 1
 
 Foi construído um cenário de Sandbox dentro de uma workspace Databricks Azure, para a construção de modelos de Deep Learning. A escolha do provedor Azure neste cenário específico foi em decorrência dos recursos disponíveis neste ambiente, e a liberdade para o consumo de créditos, acordado previamente.
 
-O cenário aqui implementado consistiu no consumo do MNIST, mencionado na sessão anterior, e utilizando-se uma Rede Convolucional (CNN) com poucas camadas (diminuindo o tempo e recursos para treinamento), para validar o cenário de implantação com um modulo funcional.
+O cenário aqui implementado consistiu no consumo do MNIST, mencionado na sessão anterior, e utilizando-se uma Rede Convolucional (CNN) com poucas camadas (diminuindo o tempo e recursos para treinamento), para validar o cenário de implantação com um modulo funcional, a função de treino pode ser vista abaixo.
+
+```python
+def train():
+  import tensorflow as tf
+  import uuid
+ 
+  BUFFER_SIZE = 10000
+  BATCH_SIZE = 64
+ 
+  def make_datasets():
+    (mnist_images, mnist_labels), _ = \
+        tf.keras.datasets.mnist.load_data(path=str(uuid.uuid4())+'mnist.npz')
+ 
+    dataset = tf.data.Dataset.from_tensor_slices((
+        tf.cast(mnist_images[..., tf.newaxis] / 255.0, tf.float32),
+        tf.cast(mnist_labels, tf.int64))
+    )
+    dataset = dataset.repeat().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+    return dataset
+ 
+  def build_and_compile_cnn_model():
+    model = tf.keras.Sequential([
+      tf.keras.layers.Conv2D(32, 3, activation='relu', input_shape=(28, 28, 1)),
+      tf.keras.layers.Conv2D(32, 3, activation='relu', input_shape=(28, 28, 1)),
+      tf.keras.layers.Conv2D(32, 3, activation='relu', input_shape=(28, 28, 1)),
+      tf.keras.layers.MaxPooling2D(),
+      tf.keras.layers.Flatten(),
+      tf.keras.layers.Dense(64, activation='relu'),
+      tf.keras.layers.Dense(10, activation='softmax'),
+    ])
+    model.compile(
+      loss=tf.keras.losses.sparse_categorical_crossentropy,
+      optimizer=tf.keras.optimizers.SGD(learning_rate=0.001),
+      metrics=['accuracy'],
+    )
+    return model
+  
+  train_datasets = make_datasets()
+  multi_worker_model = build_and_compile_cnn_model()
+ 
+  # Specify the data auto-shard policy: DATA
+  options = tf.data.Options()
+  options.experimental_distribute.auto_shard_policy = \
+      tf.data.experimental.AutoShardPolicy.DATA
+  train_datasets = train_datasets.with_options(options)
+  
+  multi_worker_model.fit(x=train_datasets, epochs=50, steps_per_epoch=100)
+```
 
 Para treinamento utilizando os recursos de GPU e distribuição de tarefas entre os workers existem 4 modos de treinamento conforme detalhados nos tópicos a seguir.
 
@@ -141,13 +189,10 @@ Para treinamento utilizando os recursos de GPU e distribuição de tarefas entre
   
 O treinamento Single Node consiste na modalidade mais simples de treino, na qual o recurso é completamente alocado no driver, se esse possuir uma GPU a mesma pode ser utilizada para acelerar o treinamento, entretanto a paralelização de tarefas ocorrerá somente dentro das threads da GPU.
 
-A partir de uma função de treinamento pré-construída pode-se invocar o treinamento single-node conforme abaixo:
+A partir de uma função de treinamento pré-construída, detalhada anteriormente, pode-se invocar o treinamento single-node conforme abaixo:
 
 ```python
-from spark_tensorflow_distributor import MirroredStrategyRunner
- 
-runner = MirroredStrategyRunner(num_slots=1, local_mode=True, use_gpu=USE_GPU)
-runner.run(train)
+train()
 ```
 
   ## 6.2 Treinamento Distribuído
@@ -155,13 +200,50 @@ runner.run(train)
 O treinamento distríbuido permite a utilização mais de um nó para paralelização da execução das tarefas de treinamento, podendo multiplexar o treinamento de vários modelos simultaneamente, ou até mesmo de um único modelo cross-workers.
 
   ### 6.2.1 Treinamento Distribuído: Local Mode
-  
+
+O modo de treinamento local permite apenas que o código seja executado dentro do driver-node. E para tanto é necessário utilizar o código abaixo. Entretanto, vale salientar que esse modo não utiliza o poder de paralelismo disponível em um Cluster. Ou seja, é o mesmo que realizar o descrito no método [6.1](#61-treinamento-single-node).
+
+```python
+from spark_tensorflow_distributor import MirroredStrategyRunner
+ 
+runner = MirroredStrategyRunner(num_slots=1, local_mode=True, use_gpu=USE_GPU)
+runner.run(train)
+```
   
   ### 6.2.2 Treinamento Distribuído: Distributed Mode
-  
-  
+
+Neste modo em específico os workers dentro do cluster são utilizados para divisão das tarefas, ao invés de serem executadas no driver. O número de workers pode ser definido assim como se serão utilizadas GPUs ou não para o processamento paralelizado.
+
+```python
+NUM_SLOTS = TOTAL_NUM_GPUS if USE_GPU else 4  # For CPU training, choose a reasonable NUM_SLOTS value
+runner = MirroredStrategyRunner(num_slots=NUM_SLOTS, use_gpu=USE_GPU)
+runner.run(train)
+```
+
   ### 6.2.3 Treinamento Distribuído: Custom Mode
   
+Para utilização da estratégia customizada de treinamento, podendo utilizar simultaneamente vários modelos com diferentes parâmetros é necessário definir uma função customizada de treino, adicionando o código abaixo dentro do escopo da função `train()`já citada:
+
+```python
+def train_custom_strategy():
+  import tensorflow as tf
+  import mlflow.tensorflow
+  
+  strategy = tf.distribute.experimental.MultiWorkerMirroredStrategy(
+      tf.distribute.experimental.CollectiveCommunication.NCCL)
+  
+  with strategy.scope():
+    import uuid
+ 
+    BUFFER_SIZE = 10000
+    BATCH_SIZE = 64
+```
+
+Após a criação de um escopo personalizado, a função precisa ser invocada de forma similar a já mostrada anteriormente.
+```python
+runner = MirroredStrategyRunner(num_slots=2, use_custom_strategy=True, use_gpu=USE_GPU)
+runner.run(train_custom_strategy)
+```
   
 # 7. Model Logging e Registry via MLFlow
 
@@ -181,14 +263,18 @@ import mlflow
 import mlflow.tensorflow
 import mlflow.spark
 ```
-Para o autolog:
+Para a utilização do método de autolog, basta invoca-lo para Spark e TensorFlow:
 ```python
 mlflow.autolog()
 mlflow.spark.autolog()
 mlflow.tensorflow.autolog()
 ```
-Para o registry de modelos:
+Para o registry de modelos é necessário definir o `registry_uri` que é a composição criada pelo scope e key e depois disso efetuar o registry em um repositório remoto, conforme abaixo:
 ```python
+scope = 'data_masters_gcp'
+key = 'data_masters_deploy'
+registry_uri = 'databricks://' + scope + ':' + key if scope and key else None
+
 mlflow.set_registry_uri(registry_uri)
 mlflow.register_model(model_uri=<path_to_uri_model>, name=<name_of_model_to_save>)
 ```
@@ -213,9 +299,11 @@ Na seção [4.4](#44-infraestrutura-azure) e [4.5](#45-infraestrutura-gcp) foram
   
   ## 8.2 Utilização de Client para Conexão com Repositórios Remotos
   
+Um dos recursos nativos mais interessantes disponíveis para o MLFlow é a possibilidade de através de um pipeline de CI/CD realizar a integração entre diferentes workspaces Databricks em diferentes provedores de Cloud.
   
 # 9. Deploy Databricks GCP
 
+O ambiente Databricks criado na Google Cloud Plataform (GCP) tem o objetivo de replicar o que seria um ambiente de "produção", neste caso, um workspace isolado em uma outra instância de Cloud Pública. 
 
 # 10. Requisições de Teste na API Deployada
 
@@ -225,8 +313,22 @@ Para testar o ambiente desenvolvido foi necessário localmente desenvolver um ou
 
 Este notebook é responsável por montar a requisição no formato pré-definido na documentação do TFX, seguindo o padrão:
 
-E, após a chamada, tratar o retorno no formato `np.array()` para encontrar o maior valor que corresponde a predição do modelo, isso é realizado utilizando o método `argmax()` que retorna a posição de 0 a 9 do maior valor encontrado no array.
-
+E, após a chamada, tratar o retorno no formato `np.array()` para encontrar o maior valor que corresponde a predição do modelo, isso é realizado utilizando o método `argmax()` que retorna a posição de 0 a 9 do maior valor encontrado no array, conforme detalhado no código abaixo.
+```python
+def score_model(image, url=url, headers=headers):
+    
+    data_json = json.dumps(create_formated_image(image))
+    
+    response = requests.request(method='POST', headers=headers, url=url, data=data_json)
+    
+    if response.status_code != 200:
+        raise Exception(f'Request failed with status {response.status_code}, {response.text}')
+    
+    prediction = response.json()['predictions']
+    prediction = np.argmax(prediction)
+    
+    return prediction
+```
 A chamada precisa conter o token para conexão com o workspace Databricks em seu header, visando sempre as boas práticas de programação e segurança o token foi criado utilizando uma váriavel de ambiente, para que o mesmo não ficasse exposto em código, a variável utilizada foi:
 
 `DATABRICKS_TOKEN_GCP`.
