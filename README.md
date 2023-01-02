@@ -283,9 +283,7 @@ mlflow.register_model(model_uri=<path_to_uri_model>, name=<name_of_model_to_save
 
 Uma das vantagens do serviço já ser nativo a plataforma é a facilidade de não necessitar da instanciação de um serviço paralelo, via container, do MLFlow para se utilizar todas as vantagens desta ferramenta. 
 
-Aproveitando desse fato e também da possibilidade de registrar modelos em um repositório remoto (feature disponibilizada nativamente pelo MLFlow), é possível orquestrar um pipeline para se realizar o treinamento e logging de um modelo em um ambiente de experimentação, sandbox, e registrá-lo remotamente em um ambiente produtivo, de deploy. Conforme ilustrado na figura abaixo.
-
-<img width="900" alt="image" src="https://user-images.githubusercontent.com/37118856/208350713-01446417-5076-42de-b8a0-935604d371f1.png">
+Aproveitando desse fato e também da possibilidade de registrar modelos em um repositório remoto (feature disponibilizada nativamente pelo MLFlow), é possível orquestrar um pipeline para se realizar o treinamento e logging de um modelo em um ambiente de experimentação, sandbox, e registrá-lo remotamente em um ambiente produtivo, de deploy.
 
 
   ## 8.1 Criação de Scope e Secrets Databricks
@@ -299,11 +297,70 @@ Na seção [4.4](#44-infraestrutura-azure) e [4.5](#45-infraestrutura-gcp) foram
   
   ## 8.2 Utilização de Client para Conexão com Repositórios Remotos
   
-Um dos recursos nativos mais interessantes disponíveis para o MLFlow é a possibilidade de através de um pipeline de CI/CD realizar a integração entre diferentes workspaces Databricks em diferentes provedores de Cloud.
-  
+Um dos recursos nativos mais interessantes disponíveis para o MLFlow é a possibilidade de através de um pipeline de CI/CD realizar a integração entre diferentes workspaces Databricks em diferentes provedores de Cloud. A imagem a seguir retrata o funcionamento da integração (pipeline de CI/CD) utilizado para realizar a integração entre ambientes.
+ 
+<img width="1000" alt="image" src="https://user-images.githubusercontent.com/37118856/208350713-01446417-5076-42de-b8a0-935604d371f1.png">
+
+No cenário desse experimento não foi implementado um workspace de staging, apesar de ser possível, haja vista que o intuito era validar a implantação. Entretanto, um workspace de staging pode ser de grande serventia em um cenário produtivo usual, sendo um espaço transitório onde os times de Cientistas de Dados persistem os registros de seus modelos, e a partir deste workspace a esteira para produção é empurrada.
+
 # 9. Deploy Databricks GCP
 
 O ambiente Databricks criado na Google Cloud Plataform (GCP) tem o objetivo de replicar o que seria um ambiente de "produção", neste caso, um workspace isolado em uma outra instância de Cloud Pública. 
+
+A partir de um modelo já registrado nesse repositório remoto é possível validar este modelo, realizar um "deploy" com predict direto em uma célula de notebook e efetivamente servir como REST API ou como job agendado.
+
+Dentro deste ambiente de produção é possível realizar algumas validações, por exemplo, adicionar uma descrição de alto nível, uma descrição por versão, promover ou regredir de stagging para produção e vice-versa, e por fim realizar um predict de teste e o deploy como API do modelo criado.
+
+Antes de realizar quaisquer alterações sejam de stage ou descrição é necessário realizar o load do modelo, conforme descrito:
+```python
+model_name = <yours_model_name>
+model_version = <specified_version>
+model = mlflow.pyfunc.load_model(
+    model_uri=f"models:/{model_name}/{model_version}"
+)
+```
+
+Para adicionar uma descrição de alto nível utiliza-se o código:
+```python
+client.update_registered_model(
+  name=model_name,
+  description=<yours_description>
+)
+```
+
+Para adicionar uma descrição para uma versão do modelo, utiliza-se:
+```python
+model_description = client.update_model_version(
+  name=model_name,
+  version=model_version,
+  description=<yours_description>
+)
+```
+
+Já uma mudança de estágio de modelo pode ser realizada através dos comandos:
+```python
+model_transiction = client.transition_model_version_stage(
+  name=model_name,
+  version=model_version,
+  stage='Staging', # or Production
+)
+```
+
+Após realizadas todas as mudanças de estágio e descrição previstas é possível fazer um teste de predição do modelo utilizando:
+```python
+predictions = model.predict(sample)
+```
+
+De posse de todas as informações e validações necessárias, é possível realizar o deploy deste modelo, procedendo de duas maneiras distintas: inferência batch ou REST API, sendo a adotada para este experimento a segunda opção de inferência via REST API. 
+
+<img width="1439" alt="image" src="https://user-images.githubusercontent.com/37118856/210193344-feebe65c-89fa-47d6-9120-763c8e52d293.png">
+
+Para tanto, pode e é recomendável a utilização do componente de serving de modelos nativo da plataforma. Que permite a seleção de cluster e parametrização, assim como a geração de logs de API e templates de consumo conforme imagens e documentação disponível em [Serving de Modelos utilizando REST API](https://docs.databricks.com/mlflow/model-serving.html). 
+
+![image](https://docs.databricks.com/_images/enable-serving.gif)
+
+A animação acima retrata o passo-a-passo para realização do serving do modelo como REST API. Este .gif está disponível dentro da documentação oficial da Databricks. É digno de nota que para cada cenário em específico um tipo de cluster é recomendado com o intuito de maximizar a performance e custo da aplicação.
+
 
 # 10. Requisições de Teste na API Deployada
 
@@ -364,4 +421,10 @@ Site: https://learn.microsoft.com/en-us/azure/databricks/machine-learning/manage
 Site: https://www.databricks.com/blog/2016/01/25/deep-learning-with-apache-spark-and-tensorflow.html
 
 Site: https://www.mlflow.org/docs/latest/rest-api.html
+
+Site: https://docs.databricks.com/mlflow/model-serving.html
+
+Site: https://learn.microsoft.com/en-us/azure/databricks/security/secrets/secret-scopes
+
+Site: https://docs.databricks.com/mlflow/models.html
 
